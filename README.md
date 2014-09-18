@@ -5,5 +5,5 @@ BehanceMuzei
 
 A Muzei extension to view images from popular projects on Behance
 
-![App Icon](http://i.imgur.com/HJPnpKB.png)
+![App Icon](http://i.imgur.com/kdWd9As.png)
 ![Screenshot](http://i.imgur.com/L0vfy9X.png)
