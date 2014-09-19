@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">Behance (Muzei Source)</string>
+    <string name="app_name">Behance Projects - Muzei</string>
     <string name="source_name">Behance</string>
     <string name="source_description">Art projects from Behance</string>
+    <string name="title_activity_behance_setting">BehanceSettingActivity</string>
+    <string name="action_settings">Settings</string>
+    <string name="popular_photos">Popular Photos</string>
 
 </resources>

@@ -83,8 +83,11 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
             while (true) {
                 module = projectD.project.modules.get
                         (random.nextInt(projectD.project.modules.size()));
-                if (TextUtils.equals(module.type, "image") && (module.sizes.original.endsWith(".jpg"))) {
-                    break; // select module with JPG image
+                if (TextUtils.equals(module.type, "image")
+                        && ((module.sizes.original.endsWith(".jpg"))
+                        || (module.sizes.original.endsWith(".jpeg"))
+                        || (module.sizes.original.endsWith(".png")))) {
+                    break; // select module with JPG, JPEG or PNG image
                 }
             }
             if (projectList.projects.size() <= 1
@@ -96,7 +99,7 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
         publishArtwork(new Artwork.Builder()
                 .title(project.name)
                 .byline(owner.username)
-                .imageUri(Uri.parse(module.src))
+                .imageUri(Uri.parse(module.sizes.original))
                 .token(Integer.toString(project.id))
                 .viewIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(project.url)))
                 .build());
