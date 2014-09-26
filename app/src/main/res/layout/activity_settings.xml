@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingBottom="48dp"
+    android:paddingTop="72dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_margin="15dp">
+
+        <EditText
+            android:id="@+id/userName"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:hint="@string/user_name"
+            android:singleLine="true"
+            android:textColor="@android:color/white"
+            android:textColorHint="#30FFFFFF"
+            android:textCursorDrawable="@null"/>
+
+        <ImageButton
+            android:id="@+id/add"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_add"
+            android:background="@drawable/white_selectable_item_background"
+            />
+
+    </LinearLayout>
+
+    <ListView
+        android:id="@+id/list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        tools:listitem="@layout/listitem_project"/>
+
+    <com.varuncjain.behancemuzei.ui.AlegreyaTextView
+        android:id="@+id/empty"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_margin="10dp"
+        android:layout_weight="1"
+        android:background="@drawable/white_selectable_item_background"
+        android:gravity="center"
+        android:text="@string/no_user"
+        android:textColor="@android:color/white"
+        android:textSize="22sp"
+        tools:visibility="gone"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <TextView
+            android:id="@+id/config_freq"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/white_selectable_item_background"
+            android:drawableStart="@drawable/ic_config_freq"
+            android:drawablePadding="10dp"
+            android:fontFamily="sans-serif-thin"
+            android:gravity="center_vertical"
+            android:padding="10dp"
+            android:text="@string/config_every"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"/>
+
+        <TextView
+            android:id="@+id/config_connection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/white_selectable_item_background"
+            android:drawablePadding="10dp"
+            android:fontFamily="sans-serif-thin"
+            android:gravity="center_vertical"
+            android:padding="10dp"
+            android:text="@string/config_connection_wifi"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"/>
+
+        <TextView
+            android:id="@+id/config_popular"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/white_selectable_item_background"
+            android:drawablePadding="10dp"
+            android:fontFamily="sans-serif-thin"
+            android:gravity="center_vertical"
+            android:padding="10dp"
+            android:text="@string/config_popular_on"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"/>
+    </LinearLayout>
+
+
+</LinearLayout>

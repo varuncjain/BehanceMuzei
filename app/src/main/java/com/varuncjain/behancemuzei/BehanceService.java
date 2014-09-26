@@ -6,11 +6,23 @@ import retrofit.http.GET;
 import retrofit.http.Path;
 
 public interface BehanceService {
-    @GET("/v2/projects?sort=featured_date")
-    ProjectList getProjects();
+
+    public static String API_URL = "http://www.behance.net";
+
+    @GET("/v2/projects")
+    ProjectList getPopularProjects();
 
     @GET("/v2/projects/{project_id}")
     ProjectDetail getProject(@Path("project_id") int id);
+
+    @GET("/v2/users")
+    UserList getPopularUsers();
+
+    @GET("/v2/users/{user}")
+    UserDetail getUser(@Path("user") String username);
+
+    @GET("/v2/users/{user}/projects")
+    ProjectList getUserProjects(@Path("user") String username);
 
     static class ProjectList {
         List<Project> projects;
@@ -24,17 +36,25 @@ public interface BehanceService {
         int id;
         String name;
         String url;
-        List<Owner> owners;
+        List<User> owners;
         List<Module> modules;
     }
 
-    static class Owner {
+    static class UserList {
+        List<User> users;
+    }
+
+    static class UserDetail {
+        User user;
+    }
+
+    static class User {
         String username;
+        String display_name;
     }
 
     static class Module {
         String type;
-        String src;
         Size sizes;
     }
 

@@ -8,8 +8,8 @@ android {
         applicationId "com.varuncjain.behancemuzei"
         minSdkVersion 19
         targetSdkVersion 20
-        versionCode 2
-        versionName "1.0.1"
+        versionCode 3
+        versionName "2.0"
     }
     buildTypes {
         release {
@@ -19,8 +19,17 @@ android {
     }
 }
 
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     compile 'com.squareup.retrofit:retrofit:1.6.1'
     compile 'com.google.android.apps.muzei:muzei-api:+'
+    compile 'com.android.support:support-v4:20.0.0'
+    compile 'com.doomonafireball.betterpickers:library:1.5.2'
+    compile 'com.nhaarman.listviewanimations:lib-core:3.1.0@aar'
+    compile 'com.nhaarman.listviewanimations:lib-manipulation:3.1.0@aar'
+    compile 'com.nhaarman.listviewanimations:lib-core-slh:3.1.0@aar'
     compile fileTree(dir: 'libs', include: ['*.jar'])
 }

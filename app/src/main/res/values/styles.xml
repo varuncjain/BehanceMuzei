@@ -1,6 +1,27 @@
 <resources>
 
-    <style name="AppTheme" parent="android:Theme.Holo.Light.DarkActionBar">
+    <style name="Theme.Behance.Settings" parent="@android:style/Theme.Holo.Light">
+        <item name="android:actionBarStyle">@style/Settings.ActionBar</item>
+        <item name="android:windowActionBarOverlay">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowShowWallpaper">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+
+        <item name="android:editTextBackground">@drawable/behance_theme_edit_text_holo_light</item>
+    </style>
+
+    <style name="Settings.ActionBar" parent="android:Widget.Holo.ActionBar">
+        <item name="android:background">@null</item>
+        <item name="android:displayOptions">disableHome|showCustom</item>
+    </style>
+
+    <style name="UserNameView">
+        <item name="android:shadowColor">#dd000000</item>
+        <item name="android:shadowDx">2</item>
+        <item name="android:shadowDy">2</item>
+        <item name="android:shadowRadius">2</item>
     </style>
 
 </resources>

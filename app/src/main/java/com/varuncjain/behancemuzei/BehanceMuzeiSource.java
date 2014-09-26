@@ -8,42 +8,61 @@ import android.util.Log;
 import com.google.android.apps.muzei.api.Artwork;
 import com.google.android.apps.muzei.api.RemoteMuzeiArtSource;
 
+import java.util.Iterator;
 import java.util.Random;
+import java.util.List;
+import java.util.ArrayList;
 
 import retrofit.ErrorHandler;
 import retrofit.RequestInterceptor;
 import retrofit.RestAdapter;
 import retrofit.RetrofitError;
 
-import static com.varuncjain.behancemuzei.BehanceService.Module;
-import static com.varuncjain.behancemuzei.BehanceService.Owner;
+import static com.varuncjain.behancemuzei.BehanceService.ProjectList;
 import static com.varuncjain.behancemuzei.BehanceService.Project;
 import static com.varuncjain.behancemuzei.BehanceService.ProjectDetail;
-import static com.varuncjain.behancemuzei.BehanceService.ProjectList;
+import static com.varuncjain.behancemuzei.BehanceService.UserList;
+import static com.varuncjain.behancemuzei.BehanceService.User;
+import static com.varuncjain.behancemuzei.BehanceService.Module;
 
 public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
 
     private static final String TAG = "BehanceMuzei";
     private static final String SOURCE_NAME = "BehanceMuzeiSource";
 
-    private static final int ROTATE_TIME_MILLIS = 3 * 60 * 60 * 1000; // rotate every 3 hours
+    private BehanceService mBehanceService;
+    private List<Project> mProjects;
 
     public BehanceMuzeiSource() {
         super(SOURCE_NAME);
+    }
+
+    private int getRotateTimeMillis() {
+        return PreferenceHelper.getConfigFreq(this);
+    }
+
+    private boolean isConnectedAsPreferred() {
+        if (PreferenceHelper.getConfigConnection(this) == PreferenceHelper.CONNECTION_WIFI) {
+            return Utils.isWifiConnected(this);
+        }
+        return true;
+    }
+
+    private boolean isPopularEnabled() {
+        if (PreferenceHelper.getConfigPopular(this) == PreferenceHelper.USERS_POPULAR_ON) {
+            return true;
+        }
+        return false;
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
         setUserCommands(BUILTIN_COMMAND_ID_NEXT_ARTWORK);
-    }
-
-    @Override
-    protected void onTryUpdate(int reason) throws RetryException {
-        String currentToken = (getCurrentArtwork() != null) ? getCurrentArtwork().getToken() : null;
 
         RestAdapter restAdapter = new RestAdapter.Builder()
-                .setEndpoint("http://www.behance.net")
+                .setEndpoint(BehanceService.API_URL)
+                .setLogLevel(RestAdapter.LogLevel.FULL)
                 .setRequestInterceptor(new RequestInterceptor() {
                     @Override
                     public void intercept(RequestFacade request) {
@@ -58,52 +77,113 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
                                 || (500 <= statusCode && statusCode < 600)) {
                             return new RetryException();
                         }
-                        scheduleUpdate(System.currentTimeMillis() + ROTATE_TIME_MILLIS);
+                        scheduleUpdate(System.currentTimeMillis() + getRotateTimeMillis());
                         return retrofitError;
                     }
                 })
                 .build();
 
-        BehanceService service = restAdapter.create(BehanceService.class);
-        ProjectList projectList = service.getProjects();
+        mBehanceService = restAdapter.create(BehanceService.class);
+        mProjects = new ArrayList<Project>();
+        PreferenceHelper.limitConfigFreq(this);
+    }
 
-        if (projectList == null || projectList.projects == null) {
-            throw new RetryException();
+    @Override
+    protected void onTryUpdate(int reason) throws RetryException {
+        if (!isConnectedAsPreferred()) {
+            scheduleUpdate(System.currentTimeMillis() + getRotateTimeMillis());
+            return;
+        }
+
+        String currentToken = (getCurrentArtwork() != null) ? getCurrentArtwork().getToken() : null;
+
+        List<String> userNames = PreferenceHelper.userNamesFromPref(getApplicationContext());
+
+        if (isPopularEnabled()) {
+            UserList userList = mBehanceService.getPopularUsers();
+            if (userList == null || userList.users == null) {
+                throw new RetryException();
+            }
+
+            List<String> popularUsers = new ArrayList<String>();
+            for (User user : userList.users) {
+                popularUsers.add(user.username);
+            }
+            userNames.addAll(popularUsers);
+        }
+
+        if(userNames.isEmpty()) {
+            Log.w(TAG, "no usernames.");
+            scheduleUpdate(System.currentTimeMillis() + getRotateTimeMillis());
+            return;
+        }
+
+        if(reason != UPDATE_REASON_USER_NEXT || mProjects.isEmpty()) {
+            mProjects.clear();
+            Iterator<String> iterator = userNames.iterator();
+            while (iterator.hasNext()) {
+                try {
+                    String userName = iterator.next();
+                    ProjectList projectList = mBehanceService.getUserProjects(userName);
+                    if(projectList.projects.size() == 0) {
+                        Log.w(TAG, String.format("user %s has no projects, skip", userName));
+                        iterator.remove();
+                    }
+                    else {
+                        mProjects.addAll(projectList.projects);
+                    }
+                } catch (RetrofitError e) {
+                    Log.e(TAG, "error while fetching from behance", e);
+                }
+            }
         }
 
         Random random = new Random();
-        Project project = null;
-        Owner owner = null;
-        Module module = null;
+        Project project;
+        ProjectDetail projectD;
+        User user;
+        Module module;
+        String token;
 
         while (true) {
-            project = projectList.projects.get(random.nextInt(projectList.projects.size()));
-            ProjectDetail projectD = service.getProject(project.id);
-            owner = projectD.project.owners.get(0); // first owner of project
-            while (true) {
-                module = projectD.project.modules.get
-                        (random.nextInt(projectD.project.modules.size()));
-                if (TextUtils.equals(module.type, "image")
-                        && ((module.sizes.original.endsWith(".jpg"))
-                        || (module.sizes.original.endsWith(".jpeg"))
-                        || (module.sizes.original.endsWith(".png")))) {
-                    break; // select module with JPG, JPEG or PNG image
-                }
+            project = mProjects.get(random.nextInt(mProjects.size()));
+            projectD = mBehanceService.getProject(project.id);
+            project = projectD.project;
+            user = project.owners.get(0); // first owner of project
+
+            filterModules(project);
+            if (project.modules.size() == 0) {
+                continue;
             }
-            if (projectList.projects.size() <= 1
-                    || !TextUtils.equals(Integer.toString(project.id), currentToken)) {
+
+            module = project.modules.get(random.nextInt(project.modules.size()));
+            token = Integer.toString(project.id);
+            if (mProjects.size() <= 1 || !TextUtils.equals(token, currentToken)) {
                 break;
             }
         }
 
         publishArtwork(new Artwork.Builder()
                 .title(project.name)
-                .byline(owner.username)
+                .byline(user.username)
                 .imageUri(Uri.parse(module.sizes.original))
-                .token(Integer.toString(project.id))
+                .token(token)
                 .viewIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(project.url)))
                 .build());
 
-        scheduleUpdate(System.currentTimeMillis() + ROTATE_TIME_MILLIS);
+        scheduleUpdate(System.currentTimeMillis() + getRotateTimeMillis());
+    }
+
+    private void filterModules(Project project) {
+        Iterator<Module> iterator = project.modules.iterator();
+        while (iterator.hasNext()) {
+            Module module = iterator.next();
+            if (!TextUtils.equals(module.type, "image")
+                    || (!(module.sizes.original.endsWith(".jpg")
+                        || module.sizes.original.endsWith(".jpeg")
+                        || module.sizes.original.endsWith(".png")))) {
+                iterator.remove(); // remove modules without JPG, JPEG or PNG images
+            }
+        }
     }
 }

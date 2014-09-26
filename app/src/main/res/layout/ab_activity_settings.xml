@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:showDividers="middle"
+    android:divider="?android:dividerVertical"
+    android:dividerPadding="12dp">
+
+    <ImageButton
+        style="?android:actionButtonStyle"
+        android:id="@+id/actionbar_done"
+        android:background="@drawable/white_selectable_item_background"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:src="@drawable/ic_action_done"
+        android:contentDescription="@string/done" />
+
+    <com.varuncjain.behancemuzei.ui.AlegreyaTextView
+        style="@style/UserNameView"
+        android:id="@+id/title"
+        android:textSize="26sp"
+        android:layout_marginStart="10dp"
+        android:layout_width="fill_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:textColor="@android:color/white"
+        android:text="@string/title_settings" />
+
+</LinearLayout>
