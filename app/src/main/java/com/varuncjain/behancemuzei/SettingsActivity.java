@@ -144,12 +144,12 @@ public class SettingsActivity extends FragmentActivity implements OnDismissCallb
     @Override
     public void onDialogHmsSet(int reference, int hours, int minutes, int seconds) {
         int duration = hours * 3600000 + minutes * 60000 + seconds * 1000;
-        if(duration >= PreferenceHelper.MIN_FREQ_MILLIS) {
-            PreferenceHelper.setConfigFreq(this, duration);
-            updateConfigFreq();
-        } else {
-            Toast.makeText(this, "Minimum refresh rate is 03:00:00", Toast.LENGTH_LONG).show();
+        if(duration < PreferenceHelper.MIN_FREQ_MILLIS) {
+            Toast.makeText(this, "Minimum refresh rate is 3 hours", Toast.LENGTH_LONG).show();
+            duration = PreferenceHelper.MIN_FREQ_MILLIS;
         }
+        PreferenceHelper.setConfigFreq(this, duration);
+        updateConfigFreq();
     }
 
     private View.OnClickListener mOnConfigConnectionClickListener = new View.OnClickListener() {
@@ -243,7 +243,7 @@ public class SettingsActivity extends FragmentActivity implements OnDismissCallb
         Matcher matcher = pattern.matcher(userName);
 
         if(TextUtils.isEmpty(userName) || matcher.find()) {
-            Toast.makeText(SettingsActivity.this, "Bad project id.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(SettingsActivity.this, "No username specified!", Toast.LENGTH_SHORT).show();
             return;
         }
         mLastUserName = userName;

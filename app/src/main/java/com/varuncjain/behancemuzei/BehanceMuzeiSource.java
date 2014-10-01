@@ -31,6 +31,7 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
     private static final String SOURCE_NAME = "BehanceMuzeiSource";
 
     private BehanceService mBehanceService;
+    private List<User> mPopularUsers;
     private List<Project> mProjects;
 
     public BehanceMuzeiSource() {
@@ -73,8 +74,7 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
                     @Override
                     public Throwable handleError(RetrofitError retrofitError) {
                         int statusCode = retrofitError.getResponse().getStatus();
-                        if (retrofitError.isNetworkError()
-                                || (500 <= statusCode && statusCode < 600)) {
+                        if (retrofitError.isNetworkError() || statusCode == 500) {
                             return new RetryException();
                         }
                         scheduleUpdate(System.currentTimeMillis() + getRotateTimeMillis());
@@ -84,6 +84,7 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
                 .build();
 
         mBehanceService = restAdapter.create(BehanceService.class);
+        mPopularUsers = new ArrayList<User>();
         mProjects = new ArrayList<Project>();
         PreferenceHelper.limitConfigFreq(this);
     }
@@ -100,16 +101,22 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
         List<String> userNames = PreferenceHelper.userNamesFromPref(getApplicationContext());
 
         if (isPopularEnabled()) {
-            UserList userList = mBehanceService.getPopularUsers();
-            if (userList == null || userList.users == null) {
-                throw new RetryException();
+            mPopularUsers.clear();
+            try {
+                UserList userList = mBehanceService.getPopularUsers();
+                if (userList == null || userList.users == null) {
+                    throw new RetryException();
+                }
+                    for (User user : userList.users) {
+                    mPopularUsers.add(user);
+                }
+                for (User user : mPopularUsers) {
+                    userNames.add(user.username);
+                }
+            } catch (RetrofitError e) {
+                Log.e(TAG, "error while fetching popular users from behance", e);
+                return;
             }
-
-            List<String> popularUsers = new ArrayList<String>();
-            for (User user : userList.users) {
-                popularUsers.add(user.username);
-            }
-            userNames.addAll(popularUsers);
         }
 
         if(userNames.isEmpty()) {
@@ -133,9 +140,16 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
                         mProjects.addAll(projectList.projects);
                     }
                 } catch (RetrofitError e) {
-                    Log.e(TAG, "error while fetching from behance", e);
+                    Log.e(TAG, "error while fetching user projects from behance", e);
+                    return;
                 }
             }
+        }
+
+        Log.i(TAG, String.format("there are %s available projects", mProjects.size()));
+        if (mProjects.isEmpty()) {
+            Log.w(TAG, "no projects to choose images from");
+            throw new RetryException();
         }
 
         Random random = new Random();
@@ -146,27 +160,34 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
         String token;
 
         while (true) {
-            project = mProjects.get(random.nextInt(mProjects.size()));
-            projectD = mBehanceService.getProject(project.id);
-            project = projectD.project;
-            user = project.owners.get(0); // first owner of project
+            try {
+                project = mProjects.get(random.nextInt(mProjects.size()));
+                projectD = mBehanceService.getProject(project.id);
+                project = projectD.project;
+                user = project.owners.get(0); // first owner of project
 
-            filterModules(project);
-            if (project.modules.size() == 0) {
-                continue;
-            }
+                filterModules(project);
+                if (project.modules.size() == 0) {
+                    Log.w(TAG, String.format("project %s: %s has no qualifying images", project.id, project.name));
+                    continue;
+                }
 
-            module = project.modules.get(random.nextInt(project.modules.size()));
-            token = Integer.toString(project.id);
-            if (mProjects.size() <= 1 || !TextUtils.equals(token, currentToken)) {
-                break;
+                module = project.modules.get(random.nextInt(project.modules.size()));
+                token = Integer.toString(project.id);
+                if (mProjects.size() <= 1 || !TextUtils.equals(token, currentToken)) {
+                    Log.i(TAG, String.format("selected artwork %s", module.sizes.max_1240));
+                    break;
+                }
+            } catch (RetrofitError e) {
+                Log.e(TAG, "error while fetching user projects from behance", e);
+                return;
             }
         }
 
         publishArtwork(new Artwork.Builder()
                 .title(project.name)
                 .byline(user.username)
-                .imageUri(Uri.parse(module.sizes.original))
+                .imageUri(Uri.parse(module.sizes.max_1240))
                 .token(token)
                 .viewIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(project.url)))
                 .build());
@@ -178,10 +199,11 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
         Iterator<Module> iterator = project.modules.iterator();
         while (iterator.hasNext()) {
             Module module = iterator.next();
-            if (!TextUtils.equals(module.type, "image")
-                    || (!(module.sizes.original.endsWith(".jpg")
-                        || module.sizes.original.endsWith(".jpeg")
-                        || module.sizes.original.endsWith(".png")))) {
+            if (!(TextUtils.equals(module.type, "image")
+                    && (!module.sizes.max_1240.isEmpty())
+                    && ((module.sizes.max_1240.endsWith(".jpg")
+                        || module.sizes.max_1240.endsWith(".jpeg")
+                        || module.sizes.max_1240.endsWith(".png"))))) {
                 iterator.remove(); // remove modules without JPG, JPEG or PNG images
             }
         }

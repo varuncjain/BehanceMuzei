@@ -60,5 +60,6 @@ public interface BehanceService {
 
     static class Size {
         String original;
+        String max_1240;
     }
 }

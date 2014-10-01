@@ -61,7 +61,7 @@ public class PreferenceHelper {
     public static List<String> userNamesFromPref(Context context) {
         ArrayList<String> projects = new ArrayList<String>();
         SharedPreferences preferences = getPreferences(context);
-        String prefProjects = preferences.getString("names", "[\"gahfe\", \"selinozgur\"]");
+        String prefProjects = preferences.getString("names", "[\"jrschmidt\", \"fdedition\"]");
         if (!TextUtils.isEmpty(prefProjects)) {
             try {
                 JSONArray jsonArray = new JSONArray(prefProjects);
