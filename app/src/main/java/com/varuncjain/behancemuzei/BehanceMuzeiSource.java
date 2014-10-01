@@ -175,7 +175,9 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
                 module = project.modules.get(random.nextInt(project.modules.size()));
                 token = Integer.toString(project.id);
                 if (mProjects.size() <= 1 || !TextUtils.equals(token, currentToken)) {
-                    Log.i(TAG, String.format("selected artwork %s", module.sizes.max_1240));
+                    Log.i(TAG, String.format("selected project: %s", project.name));
+                    Log.i(TAG, String.format("selected user: %s", user.username));
+                    Log.i(TAG, String.format("selected artwork: %s", module.sizes.max_1240));
                     break;
                 }
             } catch (RetrofitError e) {
@@ -200,7 +202,7 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
         while (iterator.hasNext()) {
             Module module = iterator.next();
             if (!(TextUtils.equals(module.type, "image")
-                    && (!module.sizes.max_1240.isEmpty())
+                    && (module.sizes.max_1240 != null)
                     && ((module.sizes.max_1240.endsWith(".jpg")
                         || module.sizes.max_1240.endsWith(".jpeg")
                         || module.sizes.max_1240.endsWith(".png"))))) {
