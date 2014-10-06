@@ -136,7 +136,7 @@ public class SettingsActivity extends FragmentActivity implements OnDismissCallb
         public void onClick(View v) {
             HHmsPickerBuilder hpb = new HHmsPickerBuilder()
                     .setFragmentManager(getSupportFragmentManager())
-                    .setStyleResId(R.style.BetterPickersDialogFragment);
+                    .setStyleResId(R.style.BetterPickersDialogFragment_Light);
             hpb.show();
         }
     };
@@ -145,7 +145,7 @@ public class SettingsActivity extends FragmentActivity implements OnDismissCallb
     public void onDialogHmsSet(int reference, int hours, int minutes, int seconds) {
         int duration = hours * 3600000 + minutes * 60000 + seconds * 1000;
         if(duration < PreferenceHelper.MIN_FREQ_MILLIS) {
-            Toast.makeText(this, "Minimum refresh rate is 3 hours", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.config_min, Toast.LENGTH_LONG).show();
             duration = PreferenceHelper.MIN_FREQ_MILLIS;
         }
         PreferenceHelper.setConfigFreq(this, duration);
@@ -243,7 +243,7 @@ public class SettingsActivity extends FragmentActivity implements OnDismissCallb
         Matcher matcher = pattern.matcher(userName);
 
         if(TextUtils.isEmpty(userName) || matcher.find()) {
-            Toast.makeText(SettingsActivity.this, "No username specified!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(SettingsActivity.this, R.string.no_user_add, Toast.LENGTH_SHORT).show();
             return;
         }
         mLastUserName = userName;

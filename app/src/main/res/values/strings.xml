@@ -9,10 +9,20 @@
     <string name="add">Add</string>
     <string name="user_name">Behance creative username</string>
     <string name="no_user">No creatives in here.\nAdd one now!</string>
+    <string name="no_user_add">No creative username specified!</string>
     <string name="config_every">Refresh every %1$s.</string>
+    <string name="config_min">"Minimum refresh rate is 3 hours"</string>
     <string name="config_connection_wifi">Only on WiFi</string>
     <string name="config_connection_all">On all available connections</string>
     <string name="config_popular_on">Current popular creatives</string>
     <string name="config_popular_off">Only specified creatives</string>
+    <string name="error_too_many_request">Too many requests!\nPlease try again later</string>
+    <string name="error_forbidden">Invalid API key!\nPlease contact developer</string>
+    <string name="error_not_found">Atleast one creative username is invalid!</string>
+    <string name="action_share_artwork">Share image</string>
+    <string name="action_no_artwork_to_share">Nothing to share!\nPlease try again later</string>
+    <string name="action_share_default">Check out my Android wallpaper #BehanceMuzei</string>
+    <string name="action_download_artwork">Download image</string>
+    <string name="action_no_artwork_to_download">Nothing to download!\nPlease try again later</string>
 
 </resources>

@@ -36,6 +36,13 @@
             android:theme="@style/Theme.Behance.Settings"
             android:exported="true" >
         </activity>
+
+        <receiver
+            android:name=".DownloadReceiver" >
+            <intent-filter>
+                <action android:name="com.varuncjain.behancemuzei.Download" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

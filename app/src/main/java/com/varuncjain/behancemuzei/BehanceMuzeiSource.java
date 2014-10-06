@@ -2,12 +2,17 @@ package com.varuncjain.behancemuzei;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.google.android.apps.muzei.api.Artwork;
 import com.google.android.apps.muzei.api.RemoteMuzeiArtSource;
+import com.google.android.apps.muzei.api.UserCommand;
 
+import java.net.SocketTimeoutException;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.List;
@@ -29,7 +34,10 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
 
     private static final String TAG = "BehanceMuzei";
     private static final String SOURCE_NAME = "BehanceMuzeiSource";
+    private static final int COMMAND_ID_SHARE = MAX_CUSTOM_COMMAND_ID - 1;
+    private static final int COMMAND_ID_DOWNLOAD = MAX_CUSTOM_COMMAND_ID - 2;
 
+    private List<UserCommand> mCommands;
     private BehanceService mBehanceService;
     private List<User> mPopularUsers;
     private List<Project> mProjects;
@@ -59,7 +67,79 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
     @Override
     public void onCreate() {
         super.onCreate();
-        setUserCommands(BUILTIN_COMMAND_ID_NEXT_ARTWORK);
+        mCommands = new ArrayList<UserCommand>();
+        mCommands.add(new UserCommand(BUILTIN_COMMAND_ID_NEXT_ARTWORK));
+        mCommands.add(new UserCommand(COMMAND_ID_SHARE, getString(R.string.action_share_artwork)));
+        mCommands.add(new UserCommand(COMMAND_ID_DOWNLOAD, getString(R.string.action_download_artwork)));
+        setUserCommands(mCommands);
+        PreferenceHelper.limitConfigFreq(this);
+    }
+
+    @Override
+    protected void onCustomCommand(int id) {
+        super.onCustomCommand(id);
+
+        Artwork currentArtwork = getCurrentArtwork();
+
+        Log.d(TAG, String.format("custom action called: %s", id));
+
+        switch (id) {
+            case COMMAND_ID_SHARE:
+                if (currentArtwork == null) {
+                    Log.w(TAG, "no current image, can't share!");
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(BehanceMuzeiSource.this,
+                                    R.string.action_no_artwork_to_share,
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    return;
+                }
+                Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                shareIntent.setType("text/plain");
+                shareIntent.putExtra(Intent.EXTRA_TEXT, getString(R.string.action_share_default)
+                        + "\nfrom "
+                        + currentArtwork.getTitle()
+                        + "\n"
+                        + currentArtwork.getViewIntent().getDataString()
+                        + "\n\n"
+                        + currentArtwork.getImageUri().toString());
+                shareIntent = Intent.createChooser(shareIntent, getString(R.string.action_share_artwork));
+                shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(shareIntent);
+                break;
+
+            case COMMAND_ID_DOWNLOAD:
+                if (currentArtwork == null) {
+                    Log.w(TAG, "no current image, can't download!");
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(BehanceMuzeiSource.this,
+                                    R.string.action_no_artwork_to_download,
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    return;
+                }
+                Intent downloadIntent = new Intent(DownloadReceiver.ACTION_DOWNLOAD);
+                downloadIntent.putExtra(DownloadReceiver.TITLE, currentArtwork.getTitle());
+                downloadIntent.putExtra(DownloadReceiver.URL, currentArtwork.getImageUri().toString());
+                sendBroadcast(downloadIntent);
+                break;
+        }
+    }
+
+    @Override
+    protected void onTryUpdate(int reason) throws RetryException {
+        if (!isConnectedAsPreferred()) {
+            scheduleUpdate(System.currentTimeMillis() + getRotateTimeMillis());
+            return;
+        }
+
+        String currentToken = (getCurrentArtwork() != null) ? getCurrentArtwork().getToken() : null;
 
         RestAdapter restAdapter = new RestAdapter.Builder()
                 .setEndpoint(BehanceService.API_URL)
@@ -74,7 +154,7 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
                     @Override
                     public Throwable handleError(RetrofitError retrofitError) {
                         int statusCode = retrofitError.getResponse().getStatus();
-                        if (retrofitError.isNetworkError() || statusCode == 500) {
+                        if (retrofitError.isNetworkError() || (500 <= statusCode && statusCode < 600)) {
                             return new RetryException();
                         }
                         scheduleUpdate(System.currentTimeMillis() + getRotateTimeMillis());
@@ -86,21 +166,10 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
         mBehanceService = restAdapter.create(BehanceService.class);
         mPopularUsers = new ArrayList<User>();
         mProjects = new ArrayList<Project>();
-        PreferenceHelper.limitConfigFreq(this);
-    }
-
-    @Override
-    protected void onTryUpdate(int reason) throws RetryException {
-        if (!isConnectedAsPreferred()) {
-            scheduleUpdate(System.currentTimeMillis() + getRotateTimeMillis());
-            return;
-        }
-
-        String currentToken = (getCurrentArtwork() != null) ? getCurrentArtwork().getToken() : null;
 
         List<String> userNames = PreferenceHelper.userNamesFromPref(getApplicationContext());
 
-        if (isPopularEnabled()) {
+        if (reason != UPDATE_REASON_USER_NEXT && isPopularEnabled()) {
             mPopularUsers.clear();
             try {
                 UserList userList = mBehanceService.getPopularUsers();
@@ -115,6 +184,7 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
                 }
             } catch (RetrofitError e) {
                 Log.e(TAG, "error while fetching popular users from behance", e);
+                errorToast(e);
                 return;
             }
         }
@@ -132,7 +202,7 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
                 try {
                     String userName = iterator.next();
                     ProjectList projectList = mBehanceService.getUserProjects(userName);
-                    if(projectList.projects.size() == 0) {
+                    if (projectList.projects.size() == 0) {
                         Log.w(TAG, String.format("user %s has no projects, skip", userName));
                         iterator.remove();
                     }
@@ -141,6 +211,7 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
                     }
                 } catch (RetrofitError e) {
                     Log.e(TAG, "error while fetching user projects from behance", e);
+                    errorToast(e);
                     return;
                 }
             }
@@ -182,6 +253,7 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
                 }
             } catch (RetrofitError e) {
                 Log.e(TAG, "error while fetching user projects from behance", e);
+                errorToast(e);
                 return;
             }
         }
@@ -208,6 +280,25 @@ public class BehanceMuzeiSource extends RemoteMuzeiArtSource {
                         || module.sizes.max_1240.endsWith(".png"))))) {
                 iterator.remove(); // remove modules without JPG, JPEG or PNG images
             }
+        }
+    }
+
+    private void errorToast(RetrofitError retrofitError) {
+        int statusCode = retrofitError.getResponse().getStatus();
+        if (statusCode == 429) {
+            Toast.makeText(BehanceMuzeiSource.this,
+                    R.string.error_too_many_request,
+                    Toast.LENGTH_SHORT).show();
+        }
+        else if (statusCode == 403) {
+            Toast.makeText(BehanceMuzeiSource.this,
+                    R.string.error_forbidden,
+                    Toast.LENGTH_SHORT).show();
+        }
+        else if (statusCode == 404) {
+            Toast.makeText(BehanceMuzeiSource.this,
+                    R.string.error_not_found,
+                    Toast.LENGTH_SHORT).show();
         }
     }
 }

@@ -55,6 +55,8 @@ public interface BehanceService {
 
     static class Module {
         String type;
+        Integer width;
+        Integer height;
         Size sizes;
     }
 
